@@ -4,6 +4,7 @@ import requests
 from urllib.parse import urljoin
 from urllib.robotparser import RobotFileParser
 from bs4 import BeautifulSoup
+import time
 
 # Fetcher 클래스: 웹 페이지를 가져오는 역할을 합니다.
 class Fetcher:
@@ -11,7 +12,9 @@ class Fetcher:
         self.robot_parser = RobotFileParser()
 
     # fetch 메서드: 주어진 URL의 웹 페이지를 가져옵니다.
-    def fetch(self, url):
+    def fetch(self, base_url, url):
+        url = urljoin(base_url, url)
+        time.sleep(2)
         try:
             self.robot_parser.set_url(urljoin(url, "/robots.txt"))
             self.robot_parser.read()
@@ -52,9 +55,16 @@ class Database:
         """)
 
     # insert 메서드: 주어진 URL과 내용을 데이터베이스에 저장합니다.
+    # def insert(self, url, content):
+    #     self.cursor.execute("INSERT INTO pages VALUES (?, ?)", (url, content))
+    #     self.conn.commit()
+        
     def insert(self, url, content):
-        self.cursor.execute("INSERT INTO pages VALUES (?, ?)", (url, content))
-        self.conn.commit()
+        self.cursor.execute("SELECT url FROM pages WHERE url = ?", (url,))
+        result = self.cursor.fetchone()
+        if result is None:
+            self.cursor.execute("INSERT INTO pages VALUES (?, ?)", (url, content))
+            self.conn.commit()
     
     # close 메서드: 데이터베이스 연결을 닫습니다.
     def close(self):
@@ -78,7 +88,12 @@ class Crawler:
         while queue:
             url = queue.pop(0)
             logging.info(f"Crawling: {url}")
-            html = self.fetcher.fetch(url)
+
+            # html = self.fetcher.fetch(url)
+
+            url = urljoin(start_url, url)
+            html = self.fetcher.fetch(start_url, url)
+            
             if html is not None:
                 self.db.insert(url, html)
                 new_urls = self.parser.parse(html)
