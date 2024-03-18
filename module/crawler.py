@@ -14,7 +14,6 @@ class Fetcher:
     # fetch 메서드: 주어진 URL의 웹 페이지를 가져옵니다.
     def fetch(self, base_url, url):
         url = urljoin(base_url, url)
-        time.sleep(2)
         try:
             self.robot_parser.set_url(urljoin(url, "/robots.txt"))
             self.robot_parser.read()
@@ -95,10 +94,15 @@ class Crawler:
             html = self.fetcher.fetch(start_url, url)
             
             if html is not None:
+                
                 self.db.insert(url, html)
+
                 new_urls = self.parser.parse(html)
                 new_urls = self.dup_elim.eliminate(new_urls, self.visited)
                 self.visited.update(new_urls)
+                
+                time.sleep(2)
+
                 queue.extend(new_urls)
                 logging.info(f"Found {len(new_urls)} new URLs.")
             else:
